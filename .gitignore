@@ -1,0 +1,11 @@
+# 데이터 파일 (배포/공유 대상 아님)
+articles.db
+
+# 파이썬
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 로컬 도구 설정
+.claude/
