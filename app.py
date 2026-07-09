@@ -8,7 +8,8 @@ from collector import DB_FILE, collect_all, init_db
 from converter import convert_to_html
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 업로드 20MB 제한
+app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 요청 전체 100MB 제한
+MAX_FILE_BYTES = 20 * 1024 * 1024  # 파일당 20MB 제한
 app.secret_key = "news-monitor-flash-key"
 
 
@@ -81,27 +82,40 @@ def notices():
 
 @app.route("/notices", methods=["POST"])
 def upload_notice():
-    file = request.files.get("file")
-    if file is None or not file.filename:
+    files = [f for f in request.files.getlist("file") if f and f.filename]
+    if not files:
         flash("파일을 선택해주세요.")
         return redirect(url_for("notices"))
-    title = request.form.get("title", "").strip() or file.filename
-    try:
-        html = convert_to_html(file.read(), file.filename)
-    except ValueError as e:
-        flash(str(e))
-        return redirect(url_for("notices"))
-    except Exception:
-        flash("파일 변환에 실패했습니다. 파일이 손상되지 않았는지 확인해주세요.")
-        return redirect(url_for("notices"))
+    custom_title = request.form.get("title", "").strip()
     db = get_db()
-    cur = db.execute(
-        "INSERT INTO notices (title, orig_name, html, created_ts)"
-        " VALUES (?, ?, ?, ?)",
-        (title, file.filename, html, int(time.time())),
-    )
+    saved_ids = []
+    for file in files:
+        data = file.read()
+        if len(data) > MAX_FILE_BYTES:
+            flash(f"'{file.filename}': 파일이 20MB를 초과합니다.")
+            continue
+        try:
+            html = convert_to_html(data, file.filename)
+        except ValueError as e:
+            flash(f"'{file.filename}': {e}")
+            continue
+        except Exception:
+            flash(f"'{file.filename}': 변환에 실패했습니다. 파일이 손상되지 않았는지 확인해주세요.")
+            continue
+        # 제목 직접 입력은 파일이 1개일 때만 적용, 여러 개면 파일명 사용
+        title = custom_title if custom_title and len(files) == 1 else file.filename
+        cur = db.execute(
+            "INSERT INTO notices (title, orig_name, html, created_ts)"
+            " VALUES (?, ?, ?, ?)",
+            (title, file.filename, html, int(time.time())),
+        )
+        saved_ids.append(cur.lastrowid)
     db.commit()
-    return redirect(url_for("view_notice", notice_id=cur.lastrowid))
+    if len(saved_ids) == 1 and len(files) == 1:
+        return redirect(url_for("view_notice", notice_id=saved_ids[0]))
+    if saved_ids:
+        flash(f"{len(saved_ids)}개 파일이 변환·등록되었습니다.")
+    return redirect(url_for("notices"))
 
 
 @app.route("/notices/<int:notice_id>")
