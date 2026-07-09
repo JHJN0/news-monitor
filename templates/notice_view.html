@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ notice['title'] }} - 뉴스 모니터링</title>
+<style>
+  body { font-family: 'Malgun Gothic', sans-serif; max-width: 860px; margin: 0 auto; padding: 24px; background: #f7f8fa; color: #222; }
+  h1 { font-size: 1.4rem; }
+  .back { display: inline-block; margin-bottom: 12px; color: #2563eb; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+  .meta { font-size: 0.82rem; color: #6b7280; margin-bottom: 16px; }
+  .notice-body { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; overflow-x: auto; }
+  .notice-body .notice-page { margin-bottom: 24px; border-bottom: 1px dashed #e5e7eb; padding-bottom: 24px; }
+  .notice-body .notice-page:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
+  .notice-body img { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+  <a class="back" href="{{ url_for('notices') }}">← 공고 목록으로</a>
+  <h1>{{ notice['title'] }}</h1>
+  <div class="meta">원본 파일: {{ notice['orig_name'] }}</div>
+  <div class="notice-body">
+    {{ notice['html']|safe }}
+  </div>
+</body>
+</html>
